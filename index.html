@@ -54,101 +54,110 @@ button:hover {background:#333;}
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
-  import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyChb7U4jURTdSv_Nb9D7jgwRzcRYhKb91w",
-    authDomain: "ddoollaabbii.firebaseapp.com",
-    projectId: "ddoollaabbii",
-    storageBucket: "ddoollaabbii.firebasestorage.app",
-    messagingSenderId: "635784319526",
-    appId: "1:635784319526:web:8b95e477345d819ebe4ce7"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyChb7U4jURTdSv_Nb9D7jgwRzcRYhKb91w",
+  authDomain: "ddoollaabbii.firebaseapp.com",
+  projectId: "ddoollaabbii",
+  storageBucket: "ddoollaabbii.firebasestorage.app",
+  messagingSenderId: "635784319526",
+  appId: "1:635784319526:web:8b95e477345d819ebe4ce7"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const storage = getStorage(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
 
-  const SECRET = "A1234S";
+const SECRET = "A1234S";
 
-  // زر فتح الادارة
-  document.getElementById('adminBtn').addEventListener('click', () => {
-    document.getElementById("admin").style.display = "block";
-  });
+// فتح الادارة
+document.getElementById('adminBtn').addEventListener('click', () => {
+  document.getElementById("admin").style.display = "block";
+});
 
-  // زر الدخول
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    if(document.getElementById('code').value === SECRET){
-      document.getElementById('panel').style.display = 'block';
-      showDeleteButtons();
-    } else alert("الكود غلط");
-  });
+// تسجيل الدخول
+document.getElementById('loginBtn').addEventListener('click', () => {
+  if(document.getElementById('code').value === SECRET){
+    document.getElementById('panel').style.display = 'block';
+    showDeleteButtons();
+  } else alert("الكود غلط");
+});
 
-  function showDeleteButtons() {
-    if(document.getElementById("code").value === SECRET)
-      document.querySelectorAll('.delete-btn').forEach(btn => btn.style.display = 'block');
-  }
+function showDeleteButtons() {
+  if(document.getElementById("code").value === SECRET)
+    document.querySelectorAll('.delete-btn').forEach(btn => btn.style.display = 'block');
+}
 
-  // إضافة منتج
-  document.getElementById('addProductBtn').addEventListener('click', async () => {
-    const file = document.getElementById('img').files[0];
-    const price = document.getElementById('price').value;
-    if(!file || !price) return alert("اختر صورة واكتب السعر");
+// إضافة منتج
+document.getElementById('addProductBtn').addEventListener('click', async () => {
+  const fileInput = document.getElementById('img');
+  const file = fileInput.files[0];
+  const price = document.getElementById('price').value;
+  
+  if (!file) return alert("اختر صورة");
+  if (!price) return alert("اكتب السعر");
 
+  try {
     const storageReference = sRef(storage, 'products/' + file.name);
     await uploadBytes(storageReference, file);
     const url = await getDownloadURL(storageReference);
     await push(ref(db,'products'), { img: url, price });
-  });
-
-  // حذف منتج
-  function deleteProduct(key){
-    if(confirm("متأكد عايز تمسح المنتج؟")){
-      remove(ref(db,'products/'+key));
-    }
+    fileInput.value = "";
+    document.getElementById('price').value = "";
+  } catch(err) {
+    console.error(err);
+    alert("حصل خطأ أثناء رفع المنتج");
   }
+});
 
-  // عرض المنتجات
-  function render(){
-    const box = document.getElementById("products");
+// حذف منتج
+function deleteProduct(key){
+  if(confirm("متأكد عايز تمسح المنتج؟")){
+    remove(ref(db,'products/'+key));
+  }
+}
+
+// عرض المنتجات
+function render(){
+  const box = document.getElementById("products");
+  box.innerHTML = "";
+  const productsRef = ref(db,'products');
+  onValue(productsRef, snapshot => {
     box.innerHTML = "";
-    const productsRef = ref(db,'products');
-    onValue(productsRef, snapshot => {
-      box.innerHTML = "";
-      snapshot.forEach(childSnap=>{
-        const p = childSnap.val();
-        const key = childSnap.key;
-        box.innerHTML += `
-          <div class="card">
-            <img src="${p.img}">
-            <div class="price">${p.price} جنيه</div>
-            <button class="delete-btn" onclick="deleteProduct('${key}')">حذف</button>
-          </div>`;
-      });
-      showDeleteButtons();
+    snapshot.forEach(childSnap=>{
+      const p = childSnap.val();
+      const key = childSnap.key;
+      box.innerHTML += `
+        <div class="card">
+          <img src="${p.img}">
+          <div class="price">${p.price} جنيه</div>
+          <button class="delete-btn" onclick="deleteProduct('${key}')">حذف</button>
+        </div>`;
     });
-  }
+    showDeleteButtons();
+  });
+}
 
-  // Confetti
-  function createConfetti(){
-    for(let i=0;i<50;i++){
-      let confetti=document.createElement('div');
-      confetti.className='confetti';
-      confetti.style.left=Math.random()*100+'vw';
-      confetti.style.background=`hsl(${Math.random()*360},100%,50%)`;
-      confetti.style.animationDuration=(2+Math.random()*3)+'s';
-      document.body.appendChild(confetti);
-      setTimeout(()=>confetti.remove(),5000);
-    }
+// Confetti
+function createConfetti(){
+  for(let i=0;i<50;i++){
+    let confetti=document.createElement('div');
+    confetti.className='confetti';
+    confetti.style.left=Math.random()*100+'vw';
+    confetti.style.background=`hsl(${Math.random()*360},100%,50%)`;
+    confetti.style.animationDuration=(2+Math.random()*3)+'s';
+    document.body.appendChild(confetti);
+    setTimeout(()=>confetti.remove(),5000);
   }
+}
 
-  window.onload = ()=>{
-    render();
-    createConfetti();
-  }
-
+window.onload = ()=>{
+  render();
+  createConfetti();
+}
 </script>
 </body>
 </html>
